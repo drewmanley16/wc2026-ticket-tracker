@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Match {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  homeTeam   String
+  awayTeam   String
+  city       String
+  venue      String
+  matchDate  DateTime
+  round      String
+  group      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listings Listing[]
+  alerts   Alert[]
+
+  @@index([city])
+  @@index([matchDate])
+}
+
+model Listing {
+  id         String   @id @default(cuid())
+  matchId    String
+  source     String
+  externalId String
+  price      Float
+  quantity   Int
+  section    String?
+  row        String?
+  listingUrl String
+  scrapedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  match         Match          @relation(fields: [matchId], references: [id])
+  priceHistory  PriceSnapshot[]
+
+  @@unique([source, externalId])
+  @@index([matchId])
+  @@index([price])
+  @@index([quantity])
+}
+
+model PriceSnapshot {
+  id         String   @id @default(cuid())
+  listingId  String
+  price      Float
+  quantity   Int
+  recordedAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId])
+  @@index([recordedAt])
+}
+
+model Alert {
+  id            String    @id @default(cuid())
+  matchId       String?
+  teamFilter    String?
+  cityFilter    String?
+  maxPrice      Float
+  minQuantity   Int       @default(1)
+  phoneNumber   String
+  active        Boolean   @default(true)
+  lastTriggered DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  match    Match?         @relation(fields: [matchId], references: [id])
+  triggers AlertTrigger[]
+
+  @@index([active])
+  @@index([matchId])
+}
+
+model AlertTrigger {
+  id         String   @id @default(cuid())
+  alertId    String
+  listingUrl String
+  price      Float
+  source     String
+  sentAt     DateTime @default(now())
+
+  alert Alert @relation(fields: [alertId], references: [id])
+
+  @@index([alertId])
+}
